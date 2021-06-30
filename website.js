@@ -5,10 +5,9 @@ import { join } from 'path'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import Debug from 'debug'
-import db from './db.js'
 import crypto from 'crypto'
 import Snowflake from 'snowflake-util'
-import { setValue, fromBase64 } from './helpers.js'
+import { fromBase64 } from './helpers.js'
 
 import bot from './bot.js'
 
@@ -56,24 +55,23 @@ app.use(async function (request, response, next) {
         scope: 'identify email guilds',
         grantType: 'authorization_code'
       })
-      await db.read()
-      db.data.authTokens[p.state] = access_object
-      db.data.authTokens[p.state].timestamp = Date.now()
-      await db.write()
-      debug('exchanged for & stored the auth token')
+      await bot.db.read()
+      bot.db.set(`authTokens.${p.state}`, access_object)
+      bot.db.set(`authTokens.${p.state}.timestamp`, Date.now())
+      await bot.db.write()
+      debug('exchanged for & stored the auth tokenm also')
+      response.cookie('authState', p.state, {
+        maxAge: access_object.expires_in * 1000,
+        httpOnly: true
+      })
+      response.cookie('isLoggedIn', true, {
+        maxAge: access_object.expires_in * 1000,
+        httpOnly: false
+      })
+      debug('set user cookie')
     } catch (error) {
       debug('requesting access_token from discord went wrong: ', error)
     }
-
-    response.cookie('authState', p.state, {
-      maxAge: db.data.authTokens[p.state].expires_in * 1000,
-      httpOnly: true
-    })
-    response.cookie('isLoggedIn', true, {
-      maxAge: db.data.authTokens[p.state].expires_in * 1000,
-      httpOnly: false
-    })
-    debug('set user cookie')
 
     return response.redirect(request.originalUrl.split('?').shift())
   }
@@ -82,8 +80,13 @@ app.use(async function (request, response, next) {
   var cookie = request.cookies.authState
   if (cookie) {
     // Retrieve access_token from DB
-    await db.read()
-    request.access_token = db.data.authTokens[cookie].access_token
+    await bot.db.read()
+    var token = bot.db.get(`authTokens.${cookie}.access_token`)
+    if (!token) {
+      response.clearCookie('authState')
+      response.clearCookie('isLoggedIn')
+    }
+    request.access_token = token
   }
 
   // Logout
@@ -96,14 +99,14 @@ app.use(async function (request, response, next) {
       `${process.env.OAUTH2_CLIENT_ID}:${process.env.OAUTH2_CLIENT_SECRET}`
     ).toString('base64')
 
-    if (db.data.authTokens[cookie]) {
-      oauth
-        .revokeToken(db.data.authTokens[cookie].access_token, credentials)
-        .then(debug)
+    var token = bot.db.get(`authTokens.${cookie}`)
 
-      await db.read()
-      delete db.data.authTokens[cookie]
-      await db.write()
+    if (token) {
+      oauth.revokeToken(token.access_token, credentials).then(debug)
+
+      await bot.db.read()
+      delete bot.db.data.authTokens[cookie]
+      await bot.db.write()
 
       debug('logged user out')
     }
@@ -117,11 +120,11 @@ var bufferMiliseconds = 1000 * 60 * 60 * 24 // one day in seconds
 
 async function checkTokenExpiry () {
   // find tokens expiring with the next day and a half
-  await db.read()
-  var authStates = Object.keys(db.data.authTokens)
+  await bot.db.read()
+  var authStates = Object.keys(bot.db.data.authTokens)
   // Get keys for tokens soon to expire
   var expiringTokenKeys = authStates.filter(s => {
-    var o = db.data.authTokens[s]
+    var o = bot.db.data.authTokens[s]
     return (
       o.timestamp + o.expires_in * 1000 < Date.now() + bufferMiliseconds * 1.5
     )
@@ -129,13 +132,17 @@ async function checkTokenExpiry () {
   // Regenerate them
   expiringTokenKeys.forEach(async key => {
     debug('Regenerating expiring token: ' + key)
-    await db.read()
-    db.data.authTokens[key] = await oauth.tokenRequest({
-      refreshToken: db.data.authTokens[key].refresh_token,
-      grantType: 'refresh_token'
-    })
-    db.data.authTokens[key].timestamp = Date.now()
-    await db.write()
+    await bot.db.read()
+    var refreshToken = bot.db.get(`authTokens.${key}.refresh_token`)
+    bot.db.set(
+      `authTokens.${key}`,
+      await oauth.tokenRequest({
+        refreshToken,
+        grantType: 'refresh_token'
+      })
+    )
+    bot.db.set(`authTokens.${key}.timestamp`, Date.now())
+    await bot.db.write()
   })
 }
 
@@ -201,7 +208,7 @@ app.get('/roles/:guildId', async function (request, response) {
   var { guildId } = request.params
   try {
     if (guildId) {
-      var roles = bot.guilds.get(guildId).roles
+      var roles = bot.guilds.get(guildId).roles.filter(r => !r.managed)
       response.send(roles)
       return
     }
@@ -258,9 +265,54 @@ app.get('/emojis/:guildId', async function (request, response) {
   response.send([])
 })
 
+app.get('/botmasters/:guildId', async function (request, response) {
+  var { guildId } = request.params
+  try {
+    if (guildId) {
+      await bot.db.read()
+      var masters = bot.db.get(`guilds.${guildId}.botMasters`)
+      response.send(masters ? masters : {})
+      return
+    }
+  } catch (error) {
+    debug('guild botmasters fetch error: ', error)
+  }
+  response.send([])
+})
+
 // ==============================
 // ===== Data Post Handlers =====
 // ==============================
+
+app.post('/botmasters', async function (request, response) {
+  var config = request.body
+  var guildId = config.guild
+
+  try {
+    if (guildId) {
+      await bot.db.read()
+      var masters = bot.db.get(`guilds.${guildId}.botMasters`)
+      masters = masters ? masters : {}
+
+      if (config.mode == 'add') {
+        masters[config.roleId] = config.role
+      } else if (config.mode == 'remove') {
+        delete bot.db.data.guilds[guildId].botMasters[config.roleId]
+      }
+
+      // Update DB with the correct data
+      bot.db.set(`guilds.${guildId}.botMasters`, masters)
+      await bot.db.write()
+
+      response.send('success')
+      return
+    }
+  } catch (error) {
+    response.send('error' + error)
+    return
+  }
+  response.send('unfinished')
+})
 
 app.post('/createReactionMessage', async function (request, response) {
   var config = request.body
@@ -278,8 +330,8 @@ app.post('/createReactionMessage', async function (request, response) {
 
       // Update DB with the correct data
       await bot.db.read()
-      setValue(
-        bot.db.data,
+
+      bot.db.set(
         `guilds.${guildId}.reactionMessages.${roleMessage.id}`,
         config.reactionRoles
       )

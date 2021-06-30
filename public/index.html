@@ -80,14 +80,14 @@
           x-if="$store.appState.loggedIn && $store.appState.selectedGuild"
         >
           <div
-            class="pointer dim"
+            class="info pointer dim"
             title="Double click to unset"
             @click="$store.appState.currentPage = 'config'"
             @dblclick.prevent="$store.appState.selectedGuild = false; $store.appState.currentPage = 'invite'"
           >
             <img
               :src="$store.appState.guildImage"
-              class="dib ml2 v-mid w3 h3 br-100"
+              class="dib ml2 v-mid w2 h2 w3-ns h3-ns br-100"
               alt="profile picture"
             />
             <div
@@ -99,7 +99,7 @@
       </div>
       <div class="flex items-center tc">
         <a
-          class="dib f5 pv2 ph4 b w-auto dib white bg-animate hover-bg-white hover-black no-underline br-pill ba bw2 b--white-50"
+          class="dib f5 pv1 ph3 pv2-ns ph4-ns b w-auto dib white bg-animate hover-bg-white hover-black no-underline br-pill ba bw2 b--white-50"
           style="line-height: 41px;"
           @click="$store.appState.user = null"
           :href="$store.appState.loggedIn ? '/logout' : '/authurl'"
@@ -112,7 +112,7 @@
           <div class="dib ml2 v-mid mid-gray link dim" href="#">
             <img
               :src="$store.appState.avatarUrl"
-              class="dib w3 h3 br-100"
+              class="dib w2 h2 w3-ns h3-ns br-100"
               alt="profile picture"
             />
           </div>
@@ -120,18 +120,19 @@
       </div>
     </nav>
 
-    <div class="content ma0 w-100 mh-6 tc">
+    <div class="pa2 content ma0 w-100 mh-6 tc">
       <div class="title">
-        <div class="discordlogo w5 h4 dib"></div>
+        <div class="discordlogo w5 h3 mv3 dib"></div>
       </div>
 
       <div
         x-data
         x-init="$store.appState.currentPage = $store.appState.selectedGuild && $store.appState.isLoggedIn ? 'config' : 'invite'"
       >
+        <!-- Invite (Add Postie to server) -->
         <template x-if="$store.appState.currentPage == 'invite'">
           <article>
-            <div class="title white f2 fw7 mb5">
+            <div class="title white f2 fw7 mv5">
               Postie is anticipating your invite!
             </div>
             <div class="white o-80 f3 fw7">Don't have Postie Yet?</div>
@@ -146,6 +147,7 @@
           </article>
         </template>
 
+        <!-- Select Guild to Manage (that you share with Postie) -->
         <template x-if="$store.appState.currentPage == 'guildPicker'">
           <article class="mw6 center br4 pa3 bg-discord-dark">
             <div class="white pb1 mh0 fw6 f4 bb b--white-20">
@@ -180,10 +182,71 @@
           </article>
         </template>
 
+        <!-- Manage Postie integration selected guild -->
         <template x-if="$store.appState.currentPage == 'config'">
           <article class="mw6 center br4 pa4 bg-discord-dark white">
+            <!-- Bot Master Roles -->
+            <form class="mb2">
+              <fieldset class="ba b--transparent ph0 mh0">
+                <legend
+                  class="info pb1 mh0 fw6 f4 bb b--white-20"
+                  title="double click role to remove"
+                >
+                  Bot Master Roles
+                </legend>
+                <div class="mt3 flex flex-wrap justify-center">
+                  <label for="addbotmaster" class="f6 b db mb2 clip"
+                    >Bot Master Roles</label
+                  >
+                  <select
+                    class="white bg-black pa2 input-reset ba br3 w-75 measure mb2"
+                    type="select-one"
+                    name="addbotmaster"
+                    id="addbotmaster"
+                    @mouseover.once="$store.appState.roles()"
+                    @click="$el.style.color = (!$store.appState.guildRoles[$el.value] || !$store.appState.guildRoles[$el.value].color == 0 ? 16777215 : $store.appState.guildRoles[$el.value].color).toString(16)"
+                  >
+                    <option value="" disabled selected
+                      >Select a role to add...</option
+                    >
+                    <template x-for="role in $store.appState.guildRoles">
+                      <option
+                        :value="role.id"
+                        class="b"
+                        :style="`color:${(role.color == 0 ? 16777215 : role.color).toString(16)};`"
+                      >
+                        <div
+                          class="mh1 overflow-hidden lh-solid"
+                          style="text-overflow: ellipsis;"
+                          x-text="role.name"
+                        ></div>
+                      </option>
+                    </template>
+                  </select>
+                  <button
+                    class="ml3 pointer dim fr br3 ba ph2 pv2 dib bw2 white bg-transparent mb2"
+                    @click.prevent="$store.appState.manageBotMaster('add')"
+                  >
+                    Add Roles
+                  </button>
+                  <template
+                    x-for="role in $store.appState.botMasters"
+                    x-init="$store.appState.getBotMasters()"
+                  >
+                    <div
+                      class="pointer dim ma1 pv1 ph2 overflow-hidden lh-solid ba br-pill"
+                      :style="`text-overflow: ellipsis; color:${(role.color == 0 ? 16777215 : role.color).toString(16)};`"
+                      x-text="role.name"
+                      @dblclick.once="$store.appState.manageBotMaster('remove', role)"
+                    ></div>
+                  </template>
+                </div>
+              </fieldset>
+            </form>
+
+            <!-- Role reaction Messages -->
             <form class="ma0" id="reactionMessageForm">
-              <fieldset id="sign_up" class="ba b--transparent ph0 mh0">
+              <fieldset class="ba b--transparent ph0 mh0">
                 <legend class="pb1 mh0 fw6 f4 bb b--white-20">
                   Manage Reaction Role Messages
                 </legend>
@@ -202,7 +265,9 @@
                     x-data="{channels:[]}"
                     @mouseover.once="channels = await (await fetch('/channels/'+$store.appState.selectedGuild.id)).json()"
                   >
-                    <option value="">Please select a channel...</option>
+                    <option value="" disabled selected
+                      >Please select a channel...</option
+                    >
                     <template x-for="channel in channels">
                       <option :value="channel.id">
                         <div
@@ -285,13 +350,15 @@ React to this message to get your roles!</textarea
                           type="text"
                           :name="'role%'+emoji.key"
                           :id="'role%'+emoji.key"
-                          x-data="{roles : [], currentcolor:''}"
+                          x-data="{currentcolor:''}"
                           :style="'color:'+currentcolor"
-                          @mouseover.once="roles = await (await fetch('/roles/'+$store.appState.selectedGuild.id)).json()"
-                          @click="currentcolor = (roles[$el.value].color == 0 ? 16777215 : roles[$el.value].color).toString(16)"
+                          @mouseover.once="$store.appState.roles(true)"
+                          @click="currentcolor = ($store.appState.guildRoles[$el.value].color == 0 ? 16777215 : $store.appState.guildRoles[$el.value].color).toString(16)"
                         >
-                          <option value="">choose a role...</option>
-                          <template x-for="role in roles">
+                          <option value="" disabled selected
+                            >choose a role...</option
+                          >
+                          <template x-for="role in $store.appState.guildRoles">
                             <option
                               :value="role.id"
                               class="b"
@@ -333,7 +400,7 @@ React to this message to get your roles!</textarea
       </div>
     </div>
 
-    <div class="footer bg-discord-dark w-100 tc pv4 bottom-0">
+    <div class="footer bg-discord-dark w-100 tc pv2 pv4-ns bottom-0">
       <a href="https://sethp.cc">
         <div class="link white">Setherizor - 2021</div>
       </a>
@@ -352,14 +419,16 @@ React to this message to get your roles!</textarea
         user: null,
         emojiSelections: [],
         reactionRoles: [],
+        guildRoles: [],
+        botMasters: [],
         // ======= Computed properties =======
         get loggedIn () {
-          var cookie = document.cookie
+          var cookieRow = document.cookie
             ? document.cookie
                 .split('; ')
                 .find(row => row.startsWith('isLoggedIn'))
-                .split('=')[1]
             : false
+          var cookie = cookieRow ? cookieRow.split('=')[1] : false
 
           if (cookie && !this.user) this.fetchUser()
           if (cookie && !this.guilds) this.fetchGuilds()
@@ -371,6 +440,8 @@ React to this message to get your roles!</textarea
           return JSON.parse(retrievedObject)
         },
         set selectedGuild (g) {
+          this.guildRoles = []
+          this.botMasters = []
           localStorage.setItem('guild', JSON.stringify(g))
         },
         // https://discord.com/developers/docs/reference#image-formatting
@@ -391,7 +462,6 @@ React to this message to get your roles!</textarea
         },
         // ======= Logic Handlers =======
         addEmojiSelection (store, selection) {
-          console.log(selection)
           // https://abal.moe/Eris/docs/Message#method-addReaction
           selection.key = btoa(
             unescape(
@@ -420,9 +490,66 @@ React to this message to get your roles!</textarea
         async fetchUser () {
           this.user = await (await fetch('/user')).json()
         },
-
         async guilds () {
           return await (await fetch('/guilds')).json()
+        },
+        async roles (override) {
+          if (this.guildRoles.length == 0 || override)
+            this.guildRoles = await (await fetch(
+              '/roles/' + this.selectedGuild.id
+            )).json()
+        },
+        async getBotMasters () {
+          this.botMasters = await (await fetch(
+            '/botmasters/' + this.selectedGuild.id
+          )).json()
+        },
+        // ======= Data Updates Management =======
+        async manageBotMaster (mode, passedrole) {
+          if (!mode) return
+          await this.roles()
+          var select = document.getElementById('addbotmaster')
+          var roleId =
+            mode == 'add'
+              ? select.value
+              : this.guildRoles.find(x => x.name == passedrole.name).id
+
+          try {
+            if (roleId == '') return alert('You did not select a role')
+
+            var obj = {
+              mode,
+              roleId,
+              guild: this.selectedGuild.id
+            }
+
+            if (mode == 'add') {
+              var roleobj = this.guildRoles.find(x => x.id == roleId)
+              obj.role = {
+                color: roleobj.color,
+                name: roleobj.name
+              }
+            }
+
+            var response = await (await fetch('/botmasters', {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(obj)
+            })).text()
+
+            console.log(`botmaster ${mode} response: ` + response)
+
+            if (response == 'success') {
+              console.log(`botmaster ${mode} was successful!`)
+            }
+          } catch (error) {
+            console.error(error)
+          }
+          this.getBotMasters()
+          select.value = ''
         },
         async createReactionMessage () {
           if (!this.loggedIn) return alert('You are not logged in!')
@@ -446,7 +573,6 @@ React to this message to get your roles!</textarea
             if (Object.keys(obj.reactionRoles).length == 0)
               return alert('You did not configure any reactions')
 
-            // Alert the server
             var response = await (await fetch('/createReactionMessage', {
               method: 'POST',
               headers: {

@@ -45,7 +45,10 @@ function enable (bot) {
       )
     },
     {
-      deleteCommand: true
+      deleteCommand: false,
+      requirements: {
+        userIDs: [process.env.OWNER_USER_ID]
+      }
     }
   )
 
@@ -61,24 +64,40 @@ function enable (bot) {
     {
       description: 'deletes single message',
       fullDescription: 'deletes single message with id',
-      deleteCommand: true
+      requirements: {
+        permissions: {
+          manageMessages: true
+        }
+      }
     }
   )
 
-  // Dangerous Only dev checking
-  // TODO: DISABLE THIS ASAP
-  // bot.registerCommand('d', (msg, args) => {
-  //   if (args[0] !== undefined) {
-  //     eval(args[0])
-  //   }
-  //   msg.author.id = bot.user.id
-  // })
+  // Dangerous Command only for me to experiment with
+  bot.registerCommand(
+    'd',
+    (msg, args) => {
+      if (args[0] !== undefined) {
+        try {
+          eval(args[0])
+        } catch (error) {
+          debug(error)
+        }
+      }
+    },
+    {
+      hidden: true,
+      deleteCommand: false,
+      requirements: {
+        userIDs: [process.env.OWNER_USER_ID]
+      }
+    }
+  )
 }
 function disable (bot) {
   bot.unregisterCommand('ping')
   bot.unregisterCommand('db')
   bot.unregisterCommand('delete')
-  // bot.unregisterCommand('d')
+  bot.unregisterCommand('d')
 }
 
 export default {

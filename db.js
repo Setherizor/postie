@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { Low, JSONFile } from 'lowdb'
+import { setValue, getValue } from './helpers.js'
 
 // Use JSON file for storage
 const file = join('.', 'data', 'db.json')
@@ -19,6 +20,8 @@ async function init () {
     }
   }
   await db.write()
+  db.get = p => getValue(db.data, p)
+  db.set = (p, v) => setValue(db.data, p, v)
   return db
 }
 

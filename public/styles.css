@@ -16,6 +16,10 @@ textarea {
   resize: vertical;
 }
 
+.info:hover {
+  cursor: help;
+}
+
 @font-face {
   font-family: Whitney;
   font-style: light;

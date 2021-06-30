@@ -6,7 +6,7 @@ ARG NODE_VERSION=14-alpine
 FROM node:${NODE_VERSION} AS build
 
 RUN apk --update --no-cache add --virtual native-deps \
-  g++ gcc libgcc libstdc++ linux-headers make python
+  g++ gcc libgcc libstdc++ linux-headers make python libtool autoconf automake
 
 WORKDIR /src
 COPY package* ./
@@ -43,4 +43,7 @@ ENV PORT 8080
 EXPOSE 8080
 
 # Image default start strategy
-CMD ["npm", "run", "start:app", "--silent"]
+CMD ["npm", "run", "start"]
+
+# docker build -t 127.0.0.1:5000/seth/postie:latest .
+# docker push 127.0.0.1:5000/seth/postie:latest

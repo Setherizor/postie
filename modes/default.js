@@ -45,8 +45,7 @@ function enable (bot) {
     {
       description: 'play some audio',
       fullDescription:
-        'Should attempt to play some funny audio. Does not always work :smile:',
-      deleteCommand: true
+        'Should attempt to play some funny audio. Does not always work :smile:'
     }
   )
 
@@ -61,8 +60,7 @@ function enable (bot) {
     },
     {
       description: 'leaves voice channel',
-      fullDescription: 'goodbye to current voice channel',
-      deleteCommand: true
+      fullDescription: 'goodbye to current voice channel'
     }
   )
 }

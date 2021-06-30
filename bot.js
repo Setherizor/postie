@@ -12,9 +12,44 @@ let bot = new Eris.CommandClient(
   process.env.DISCORD_BOT_TOKEN,
   {},
   {
-    description: 'A lovely bot to help with a number of things',
     owner: 'Seth',
-    prefix: process.env.COMMAND_PREFIX
+    description: 'A lovely bot to help with a number of things',
+    prefix: process.env.COMMAND_PREFIX,
+    defaultCommandOptions: {
+      deleteCommand: true,
+      cooldown: 1000,
+      cooldownReturns: 1,
+      cooldownExclusions: {
+        userIDs: [process.env.OWNER_USER_ID] // me
+      },
+      cooldownMessage: 'Hold up there for a second 🕖',
+      errorMessage: 'Oh no! It looks like something went wrong ⚠️',
+      invalidUsageMessage:
+        "Hrmmm, that's not quite what that command is supposed to look like 🤔",
+      permissionMessage:
+        'You do not meet the requirements to run this command 🥺',
+      requirements: {
+        async custom (msg) {
+          try {
+            await db.read()
+            var masters = db.get(`guilds.${msg.guildID}.botMasters`)
+            var isBotMaster =
+              masters &&
+              msg.member.roles.some(r => masters.hasOwnProperty(r.id))
+            // it bot owner, is server admin, or is a botmaster
+            // https://abal.moe/Eris/docs/reference
+            return (
+              msg.member.id == process.env.OWNER_USER_ID ||
+              msg.member.permissions.has('administrator') ||
+              isBotMaster
+            )
+          } catch (error) {
+            debug('custom permission error: ' + error)
+            return false
+          }
+        }
+      }
+    }
   }
 )
 
@@ -32,17 +67,21 @@ bot.tmpResponse = async (originalmsg, text, timeout = 5000) => {
   )
 }
 
+// TODO: setup environment for docker
+
 // ===== Commands =====
 // Gives the URL form which to invite the bot
 bot.registerCommand(
   'invite',
-  (msg, args) => {
-    const url = 'https://sethp.cc/postie'
-    bot.createMessage(msg.channel.id, '**Invite URL** \n' + url)
-  },
+  (msg, args) =>
+    bot.createMessage(
+      msg.channel.id,
+      "**Postie's Website URL** \n" + process.env.OAUTH2_CALLBACK
+    ),
   {
     description: 'invite url',
-    fullDescription: "Gets the bot's invite url to talk too."
+    fullDescription: "Gets the url for the bot's website",
+    permissionMessage: 'it seems'
   }
 )
 
@@ -62,8 +101,7 @@ bot.registerCommand(
   },
   {
     description: 'lists modes',
-    fullDescription: 'Lists avaliable modes for bot',
-    deleteCommand: true
+    fullDescription: 'Lists avaliable modes for bot'
   }
 )
 
@@ -104,8 +142,7 @@ bot.registerCommand(
   },
   {
     description: 'sets mode',
-    fullDescription: "Changes bot's mode",
-    deleteCommand: true
+    fullDescription: "Changes bot's mode"
   }
 )
 
@@ -120,16 +157,24 @@ bot.registerCommand(
     let toDelete = allMsgs.filter(m => m.author.id == bot.user.id)
     bot.tmpResponse(msg, '**Cleaning up my messages :smiley:**', 5000)
     debug(`deleting ${toDelete.length} of my messages`)
-    bot.deleteMessages(msg.channel.id, toDelete, 'cleaning bot messages')
-    await Promise.all(
-      toDelete.map(m => bot.deleteMessage(msg.channel.id, m.id))
-    )
+    // bot.deleteMessages(msg.channel.id, toDelete, 'cleaning bot messages')
+    try {
+      await Promise.all(
+        toDelete.map(m => bot.deleteMessage(msg.channel.id, m.id))
+      )
+    } catch (error) {
+      debug('bot cleanup error: ' + error)
+    }
     bot.tmpResponse(msg, '**Finished cleaning up my messages :smiley:**', 5000)
   },
   {
     description: 'bot cleaning',
     fullDescription: 'deletes bots recent messages in channel',
-    deleteCommand: true
+    requirements: {
+      permissions: {
+        manageMessages: true
+      }
+    }
   }
 )
 
@@ -142,8 +187,7 @@ async function manageRoleFromDB (msg, emoji, reactor, removeRole = false) {
 
   await bot.db.read()
 
-  var reactionMessages = getValue(
-    bot.db.data,
+  var reactionMessages = bot.db.get(
     `guilds.${msg.guildID}.reactionMessages.${msg.id}`
   )
   // Have to do this because of how custom emojis work in the API
@@ -188,9 +232,10 @@ bot.on('messageDelete', async msg => {
   if (msg.guildID) {
     await bot.db.read()
     var reactionMessages = Object.keys(
-      getValue(bot.db.data, `guilds.${msg.guildID}.reactionMessages`)
+      bot.db.get(`guilds.${msg.guildID}.reactionMessages`)
     )
     if (
+      reactionMessages &&
       reactionMessages.length != 0 &&
       reactionMessages.indexOf(msg.id) != -1
     ) {
@@ -207,7 +252,6 @@ bot.on('messageDelete', async msg => {
 let mode = bot.db.data.config.mode
 botModes.setup(bot, mode)
 bot.on('ready', () => {
-  setupReactionManager()
   debug('Postie is active')
 })
 
