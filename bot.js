@@ -60,11 +60,11 @@ bot.tmpResponse = async (originalmsg, text, timeout = 5000) => {
   var channel = originalmsg.channel.id
   var tmpMsgId = (await bot.createMessage(channel, text)).id
 
-  setTimeout(
-    () =>
-      bot.deleteMessage(channel, tmpMsgId, 'cleaning temporary bot message'),
-    timeout
-  )
+  setTimeout(() => {
+    try {
+      bot.deleteMessage(channel, tmpMsgId, 'cleaning temporary bot message')
+    } catch (e) {}
+  }, timeout)
 }
 
 // TODO: setup environment for docker

@@ -14,14 +14,15 @@
   "scripts": {
     "format": "npx prettier-standard ./* ./modes/* './public/*'",
     "start": "DEBUG_DEPTH=10 DEBUG=postie:* PORT=8080 node --trace-warnings -r dotenv-safe/config website.js",
-    "watch": "DEBUG_DEPTH=10 DEBUG=postie:* nodemon -i data/ -r dotenv-safe/config website.js"
+    "watch": "DEBUG_DEPTH=10 DEBUG=postie:* nodemon -i data/ -r dotenv-safe/config website.js -- --trace-warnings"
   },
   "dependencies": {
+    "@discordjs/opus": "^0.5.3",
     "bufferutil": "^4.0.3",
     "cookie-parser": "^1.4.5",
-    "crypto": "^1.0.1",
     "debug": "^4.3.1",
     "discord-oauth2": "^2.6.0",
+    "discord-ytdl-core": "^5.0.4",
     "dotenv-safe": "^8.2.0",
     "eris": "^0.15.1",
     "express": "^4.17.1",
@@ -31,6 +32,7 @@
     "snowflake-util": "^1.0.1",
     "sodium-native": "^3.2.1",
     "supports-color": "^9.0.1",
+    "ytdl-core": "^4.8.3",
     "zlib-sync": "^0.1.7"
   },
   "devDependencies": {

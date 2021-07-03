@@ -19,7 +19,7 @@ RUN npm prune --production && apk del native-deps
 FROM node:${NODE_VERSION}
 
 # Get curl and bash for healthcheck / waitfor script
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl ffmpeg
 
 # Create app directory
 WORKDIR /usr/src/app
