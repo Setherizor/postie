@@ -32,10 +32,11 @@ let bot = new Eris.CommandClient(
         async custom (msg) {
           try {
             await db.read()
-            var masters = db.get(`guilds.${msg.guildID}.botMasters`)
+            var masters = Object.keys(
+              db.get(`guilds.${msg.guildID}.botMasters`)
+            )
             var isBotMaster =
-              masters &&
-              msg.member.roles.some(r => masters.hasOwnProperty(r.id))
+              masters && msg.member.roles.some(r => masters.includes(r))
             // it bot owner, is server admin, or is a botmaster
             // https://abal.moe/Eris/docs/reference
             return (
