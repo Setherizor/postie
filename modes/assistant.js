@@ -61,9 +61,7 @@ function enable (bot) {
           await bot.db.write()
           bot.tmpResponse(
             msg,
-            `:white_check_mark: Meme Shortcut \`${
-              args[0]
-            }\` successfully created!`,
+            `:white_check_mark: Meme Shortcut \`${args[0]}\` successfully created!`,
             10000
           )
         }

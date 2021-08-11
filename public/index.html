@@ -447,17 +447,13 @@ React to this message to get your roles!</textarea
         // https://discord.com/developers/docs/reference#image-formatting
         get avatarUrl () {
           return this.user
-            ? `https://cdn.discordapp.com/avatars/${this.user.id}/${
-                this.user.avatar
-              }.png`
+            ? `https://cdn.discordapp.com/avatars/${this.user.id}/${this.user.avatar}.png`
             : '/assets/discordicon.jpeg'
         },
 
         get guildImage () {
           return this.selectedGuild
-            ? `https://cdn.discordapp.com/icons/${this.selectedGuild.id}/${
-                this.selectedGuild.icon
-              }.png`
+            ? `https://cdn.discordapp.com/icons/${this.selectedGuild.id}/${this.selectedGuild.icon}.png`
             : '/assets/discordicon.jpeg'
         },
         // ======= Logic Handlers =======
@@ -495,14 +491,14 @@ React to this message to get your roles!</textarea
         },
         async roles (override) {
           if (this.guildRoles.length == 0 || override)
-            this.guildRoles = await (await fetch(
-              '/roles/' + this.selectedGuild.id
-            )).json()
+            this.guildRoles = await (
+              await fetch('/roles/' + this.selectedGuild.id)
+            ).json()
         },
         async getBotMasters () {
-          this.botMasters = await (await fetch(
-            '/botmasters/' + this.selectedGuild.id
-          )).json()
+          this.botMasters = await (
+            await fetch('/botmasters/' + this.selectedGuild.id)
+          ).json()
         },
         // ======= Data Updates Management =======
         async manageBotMaster (mode, passedrole) {
@@ -531,14 +527,16 @@ React to this message to get your roles!</textarea
               }
             }
 
-            var response = await (await fetch('/botmasters', {
-              method: 'POST',
-              headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(obj)
-            })).text()
+            var response = await (
+              await fetch('/botmasters', {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(obj)
+              })
+            ).text()
 
             console.log(`botmaster ${mode} response: ` + response)
 
@@ -573,14 +571,16 @@ React to this message to get your roles!</textarea
             if (Object.keys(obj.reactionRoles).length == 0)
               return alert('You did not configure any reactions')
 
-            var response = await (await fetch('/createReactionMessage', {
-              method: 'POST',
-              headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(obj)
-            })).text()
+            var response = await (
+              await fetch('/createReactionMessage', {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(obj)
+              })
+            ).text()
 
             console.log('message create response: ' + response)
 

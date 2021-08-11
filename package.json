@@ -20,8 +20,8 @@
     "@discordjs/opus": "^0.5.3",
     "bufferutil": "^4.0.3",
     "cookie-parser": "^1.4.5",
-    "debug": "^4.3.1",
-    "discord-oauth2": "^2.6.0",
+    "debug": "^4.3.2",
+    "discord-oauth2": "^2.7.1",
     "discord-ytdl-core": "^5.0.4",
     "dotenv-safe": "^8.2.0",
     "eris": "^0.15.1",
@@ -31,11 +31,11 @@
     "serve-favicon": "^2.5.0",
     "snowflake-util": "^1.0.1",
     "sodium-native": "^3.2.1",
-    "supports-color": "^9.0.1",
+    "supports-color": "^9.0.2",
     "ytdl-core": "^4.8.3",
     "zlib-sync": "^0.1.7"
   },
   "devDependencies": {
-    "prettier-standard": "^15.0.1"
+    "prettier-standard": "^16.4.1"
   }
 }

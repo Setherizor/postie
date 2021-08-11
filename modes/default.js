@@ -29,7 +29,7 @@ function enable (bot) {
       connection = await guild.channels.get(vcId).join()
       await bot.db.read()
       connection.setVolume(bot.db.data.config.volume || 0.01)
-      connection.on('end', () => debug('stream ended'))
+      // connection.on('end', () => debug('stream ended'))
       connection.on('error', e => debug('stream error: ' + e))
       connection.on('userDisconnect', userId => {
         debug('user disconnected from VC: ' + userId)
@@ -37,6 +37,60 @@ function enable (bot) {
     }
 
     return connection
+  }
+
+  // Helper function to play online audio
+  async function attemptToPlay (msg, url, time, verbose = false, bass = '5') {
+    const strToSec = x => {
+      if (x == undefined || x == null) return undefined
+      var parts = x.split(':').map(x => parseInt(x))
+      return parts[0] * 60 + parts[1]
+    }
+
+    try {
+      var connection = await getVcConnection(msg, true)
+      if (connection.playing) connection.stopPlaying()
+
+      // use argument or included time
+      var seek = strToSec(time)
+      if (seek == undefined) {
+        seek = url.includes('t=') ? parseInt(url.split('t=').pop()) : undefined
+      }
+
+      if (verbose)
+        bot.tmpResponse(
+          msg,
+          ':musical_note: New video being played :thumbsup:',
+          10000
+        )
+
+      connection.play(
+        ytdl(url, {
+          seek,
+          quality: 'highestaudio',
+          filter: 'audioonly',
+          fmt: 'opus',
+          encoderArgs: ['-af', 'bass=g=' + bass] // 5 is normal
+        }),
+        {
+          inlineVolume: true,
+          voiceDataTimeout: -1
+        }
+      )
+
+      if (connection.paused) connection.resume()
+    } catch (e) {
+      if (e.message == 'notInVC') {
+        bot.tmpResponse(
+          msg,
+          'You are not currently in any voice channels :angry:',
+          5000
+        )
+      } else {
+        debug('audio playback error', e)
+        bot.tmpResponse(msg, '**VoiceConnection Error**', 5000)
+      }
+    }
   }
 
   bot.registerCommand(
@@ -54,58 +108,7 @@ function enable (bot) {
         )
         return
       }
-
-      const strToSec = x => {
-        if (x == undefined || x == null) return undefined
-        var parts = x.split(':').map(x => parseInt(x))
-        return parts[0] * 60 + parts[1]
-      }
-
-      try {
-        var connection = await getVcConnection(msg, true)
-        if (connection.playing) connection.stopPlaying()
-
-        // use argument or included time
-        var seek = strToSec(args[1])
-        if (seek == undefined) {
-          seek = args[0].includes('t=')
-            ? parseInt(args[0].split('t=').pop())
-            : undefined
-        }
-
-        bot.tmpResponse(
-          msg,
-          ':musical_note: New video being played :thumbsup:',
-          10000
-        )
-
-        connection.play(
-          ytdl(args[0], {
-            seek,
-            quality: 'highestaudio',
-            filter: 'audioonly',
-            fmt: 'opus',
-            encoderArgs: ['-af', 'bass=g=5'] // 5 is normal
-          }),
-          {
-            inlineVolume: true,
-            voiceDataTimeout: -1
-          }
-        )
-
-        if (connection.paused) connection.resume()
-      } catch (e) {
-        if (e.message == 'notInVC') {
-          bot.tmpResponse(
-            msg,
-            'You are not currently in any voice channels :angry:',
-            5000
-          )
-        } else {
-          debug('audio playback error', e)
-          bot.tmpResponse(msg, '**VoiceConnection Error**', 5000)
-        }
-      }
+      await attemptToPlay(msg, args[0], args[1], true)
     },
     {
       description: 'play audio from youtube',
@@ -152,21 +155,38 @@ function enable (bot) {
   )
 
   bot.registerCommand(
-    'cena',
+    'soundboard',
     async (msg, args) => {
-      try {
-        ;(await getVcConnection(msg, true)).play(
-          'https://cdn.glitch.com/9dd5ac6b-827a-4403-85d1-9ce1cc6ee750%2Fand-his-name-is-john-cena-1.mp3?1535563563167',
-          {
-            inlineVolume: true
-          }
-        )
-      } catch (e) {
-        debug('audio playback error', e)
-        bot.tmpResponse(msg, '**VoiceConnection Error**', 5000)
+      var effects = {
+        cena: 'https://youtu.be/KJ7B60OsKJI',
+        fard: 'https://youtu.be/Q_9VMaX61nI',
+        megafard: 'https://youtu.be/cWHRB98McEc',
+        gud: 'https://youtu.be/1PwaAtp4aNI',
+        triple: 'https://youtu.be/p-94ZwwnDe8',
+        gameover: 'https://youtu.be/d0mxfCArM7Y',
+        wat: 'https://youtu.be/9jAZrzDe3aQ',
+        suprise: 'https://youtu.be/QoBhFHFSgso',
+        bruh: 'https://youtu.be/D2_r4q2imnQ',
+        sad: 'https://youtu.be/CQeezCdF4mk',
+        f: 'https://youtu.be/_asNhzXq72w',
+        waiting: 'https://youtu.be/73tGe3JE5IU'
       }
+      var keys = Object.keys(effects)
+
+      if (args[0] == undefined || !keys.includes(args[0])) {
+        bot.tmpResponse(
+          msg,
+          'what sound effect do you want to play bro?\n`' +
+            keys.join(', ') +
+            '`',
+          30000
+        )
+        return
+      }
+      await attemptToPlay(msg, effects[args[0]], args[1], false)
     },
     {
+      aliases: ['sb'],
       description: 'play meme audio',
       fullDescription: 'attempt to play some funny audio :smile:'
     }
@@ -265,7 +285,7 @@ function disable (bot) {
   bot.unregisterCommand('play')
   bot.unregisterCommand('stop')
   bot.unregisterCommand('toggleaudio')
-  bot.unregisterCommand('cena')
+  bot.unregisterCommand('soundboard')
   bot.unregisterCommand('volume')
   bot.unregisterCommand('join')
   bot.unregisterCommand('leave')

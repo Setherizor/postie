@@ -36,12 +36,12 @@ let bot = new Eris.CommandClient(
               db.get(`guilds.${msg.guildID}.botMasters`)
             )
             var isBotMaster =
-              masters && msg.member.roles.some(r => masters.includes(r))
+              masters && msg.member && msg.member.roles.some(r => masters.includes(r))
             // it bot owner, is server admin, or is a botmaster
             // https://abal.moe/Eris/docs/reference
             return (
-              msg.member.id == process.env.OWNER_USER_ID ||
-              msg.member.permissions.has('administrator') ||
+              msg.author.id == process.env.OWNER_USER_ID ||
+              (msg.member && msg.member.permissions.has('administrator')) ||
               isBotMaster
             )
           } catch (error) {
@@ -135,9 +135,7 @@ bot.registerCommand(
     }
     bot.tmpResponse(
       msg,
-      `The bot is currently in **${mode}** mode, type \`${
-        process.env.COMMAND_PREFIX
-      }help\` to learn more`,
+      `The bot is currently in **${mode}** mode, type \`${process.env.COMMAND_PREFIX}help\` to learn more`,
       5000
     )
   },
